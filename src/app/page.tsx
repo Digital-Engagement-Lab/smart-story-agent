@@ -451,10 +451,10 @@ const SmartStorySuite: React.FC = () => {
          {!storyData && !isLoading && !error && (
           <div className="text-center mb-8 pt-10">
               <h2 className={`text-2xl font-semibold mb-3 ${titleFont} ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
-                  New View News Analyzer - Beta
+                  Smart Story Suite - Beta
               </h2>
              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-500'} text-sm max-w-md mx-auto`}>
-                 Enter the article URL below to either scan details or dive deep into its structure and content.
+                 The content will be adapted so scanners and readers can instantly choose what is of interest to them at this moment
              </p>
           </div>
         )}
