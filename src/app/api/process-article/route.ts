@@ -113,13 +113,20 @@ function getAnthropicClient() {
 
 // Add this helper function at the top level
 function cleanJsonString(str: string): string {
+    // Strip markdown code fences first
+    const stripped = str
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
     // First, try to parse and stringify to normalize the JSON
     try {
-        const parsed = JSON.parse(str);
+        const parsed = JSON.parse(stripped);
         return JSON.stringify(parsed);
     } catch {
         // If parsing fails, try to clean up common escape sequence issues
-        return str
+        return stripped
             .replace(/\\\\/g, '\\')  // Fix double backslashes
             .replace(/\\"/g, '"')    // Fix escaped quotes
             .replace(/\\n/g, '\n')   // Fix newlines
