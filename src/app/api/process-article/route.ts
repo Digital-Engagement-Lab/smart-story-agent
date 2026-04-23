@@ -498,7 +498,7 @@ Critical JSON Rules & Escaping Guide:
         // --- Step 3: Call Claude API ---
         console.log(`Sending request to Claude API for ${articleUrl}. Prompt length: ~${prompt.length} chars`);
         const claudeResponse = await anthropicClient.messages.create({
-            model: "claude-3-haiku-20240307", // Consider Opus/Sonnet for complex instructions or longer context
+            model: "claude-haiku-4-5-20251001", // Consider Opus/Sonnet for complex instructions or longer context
             max_tokens: 4000, 
             system: "You are an expert data extraction and analysis tool. Your sole purpose is to return valid, correctly formatted JSON based precisely on the user's instructions and the provided text. You output ONLY the JSON object requested, nothing else. Ensure all special characters within JSON string values are properly escaped according to JSON specification. Perform the SPICE analysis accurately based *only* on the provided text. When creating 'factSections', adhere strictly to the 150-word segmentation rule and use the original text for content.",
             messages: [{ role: 'user', content: prompt }],
