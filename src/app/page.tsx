@@ -451,7 +451,7 @@ const SmartStorySuite: React.FC = () => {
          {!storyData && !isLoading && !error && (
           <div className="text-center mb-8 pt-10">
               <h2 className={`text-2xl font-semibold mb-3 ${titleFont} ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
-                  Smart Story Suite - Beta
+                  Smart Story Suite
               </h2>
              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-500'} text-sm max-w-md mx-auto`}>
                  The content will be adapted so scanners and readers can instantly choose what is of interest to them at this moment.
@@ -773,7 +773,7 @@ const SmartStorySuite: React.FC = () => {
 
               {/* Footer */}
               <footer className={`p-4 text-center text-xs ${isDarkMode ? 'bg-slate-900 text-slate-500 border-t border-slate-700' : 'bg-gray-50 text-gray-500 border-t border-gray-200'}`}>
-                New View News - Beta
+                New View News 
               </footer>
             </motion.div>
          )}
