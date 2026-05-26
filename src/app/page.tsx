@@ -53,6 +53,14 @@ interface StoryData {
     originalUrl: string;
     spiceScore: SpiceScoreData | null;
     similarityScore: number;
+    hallucinationScore: {
+        summaryScore: number;
+        highlightsScore: number;
+        overallScore: number;
+        summaryFlags: string[];
+        highlightsFlags: string[];
+        verdict: 'faithful' | 'minor_drift' | 'hallucinated';
+    } | null;
     storyTimeline: NewsVizTimeline | null;
 }
 
@@ -105,23 +113,136 @@ const enlargedImageVariants = {
 
 
 // --- Reusable Display Components ---
-interface HighlightsSummaryProps { story: StoryData | null; isDarkMode: boolean; }
-const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({ story, isDarkMode }) => {
+// interface HighlightsSummaryProps { story: StoryData | null; isDarkMode: boolean; }
+interface HighlightsSummaryProps {
+    story: StoryData | null;
+    isDarkMode: boolean;
+    onImageClick: (url: string) => void;
+}
+// const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({ story, isDarkMode }) => {
+//     if (!story) return null;
+//     return (
+//       <motion.div
+//         variants={itemVariants}
+//         className={`rounded-lg p-5 mb-6 ${isDarkMode ? 'bg-slate-700/60 border-slate-600/50' : 'bg-gray-50 border-gray-200/80'} border`}
+//       >
+//          <h2 className={`text-xl font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Story Highlights</h2>
+//          <ul className="mb-4 pl-5 list-disc space-y-1.5 text-sm">
+//            {story.highlights.map((highlight: string, index: number) => (
+//              <li key={index} className={`${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{highlight}</li>
+//            ))}
+//          </ul>
+//          <h3 className={`text-lg font-semibold mt-5 mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Summary</h3>
+//          <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{story.summary}</p>
+//       </motion.div>
+//     );
+// };
+
+const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({
+    story,
+    isDarkMode,
+    onImageClick,
+}) => {
     if (!story) return null;
+
+    const primaryImage = story.imageUrl;
+    const extraImages = story.imageUrls ?? [];
+    const summaryImage = extraImages[0] ?? null;
+    const [imgError, setImgError] = React.useState(false);
+    const [sumImgError, setSumImgError] = React.useState(false);
+
     return (
-      <motion.div
-        variants={itemVariants}
-        className={`rounded-lg p-5 mb-6 ${isDarkMode ? 'bg-slate-700/60 border-slate-600/50' : 'bg-gray-50 border-gray-200/80'} border`}
-      >
-         <h2 className={`text-xl font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Story Highlights</h2>
-         <ul className="mb-4 pl-5 list-disc space-y-1.5 text-sm">
-           {story.highlights.map((highlight: string, index: number) => (
-             <li key={index} className={`${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{highlight}</li>
-           ))}
-         </ul>
-         <h3 className={`text-lg font-semibold mt-5 mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Summary</h3>
-         <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>{story.summary}</p>
-      </motion.div>
+        <motion.div
+            variants={itemVariants}
+            className={`rounded-lg p-5 mb-6 ${
+                isDarkMode
+                    ? 'bg-slate-700/60 border-slate-600/50'
+                    : 'bg-gray-50 border-gray-200/80'
+            } border`}
+        >
+            {/* ── Highlights row: bullets left, primary image right ── */}
+            {/* ── Highlights row: image floats right, text wraps around it ── */}
+<div className="overflow-hidden">
+    <h2 className={`text-xl font-semibold mb-3 ${
+        isDarkMode ? 'text-white' : 'text-gray-800'
+    }`}>
+        Story Highlights
+    </h2>
+
+    {primaryImage && !imgError && (
+        <motion.button
+            type="button"
+            onClick={() => onImageClick(primaryImage)}
+            className={`float-right ml-4 mb-2 w-36 rounded-lg overflow-hidden border shadow-sm
+                focus:outline-none focus:ring-2 focus:ring-teal-500
+                ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            title="Click to enlarge"
+        >
+            <img
+                src={primaryImage}
+                alt="Article primary image"
+                className="w-full h-auto object-cover block"
+                loading="lazy"
+                onError={() => setImgError(true)}
+            />
+        </motion.button>
+    )}
+
+    <ul className="mb-0 pl-5 list-disc space-y-1.5 text-sm">
+        {story.highlights.map((highlight, index) => (
+            <li
+                key={index}
+                className={isDarkMode ? 'text-slate-300' : 'text-gray-700'}
+            >
+                {highlight}
+            </li>
+        ))}
+    </ul>
+    <div className="clear-both" />
+</div>
+            
+
+            {/* ── Summary row: text left, second image right ── */}
+            <div className="flex gap-4 items-center mt-5 pt-4 border-t border-dashed
+                border-gray-200 dark:border-slate-600">
+                <div className="flex-1 min-w-0">
+                    <h3 className={`text-lg font-semibold mb-2 ${
+                        isDarkMode ? 'text-white' : 'text-gray-800'
+                    }`}>
+                        Summary
+                    </h3>
+                    <p className={`text-sm leading-relaxed ${
+                        isDarkMode ? 'text-slate-300' : 'text-gray-700'
+                    }`}>
+                        {story.summary}
+                    </p>
+                </div>
+
+                {/* Second image — right of summary */}
+                {summaryImage && !sumImgError && (
+                    <motion.button
+                        type="button"
+                        onClick={() => onImageClick(summaryImage)}
+                        className={`flex-shrink-0 w-28 rounded-lg overflow-hidden border shadow-sm
+                            focus:outline-none focus:ring-2 focus:ring-teal-500
+                            ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        title="Click to enlarge"
+                    >
+                        <img
+                            src={summaryImage}
+                            alt="Additional article image"
+                            className="w-full h-auto object-cover block"
+                            loading="lazy"
+                            onError={() => setSumImgError(true)}
+                        />
+                    </motion.button>
+                )}
+            </div>
+        </motion.div>
     );
 };
 
@@ -271,30 +392,109 @@ const SpiceScoreDisplay: React.FC<SpiceScoreDisplayProps> = ({ scoreData, isDark
 };
 
 // Add the SimilarityScoreDisplay component
-interface SimilarityScoreDisplayProps {
-    score: number;
+// interface SimilarityScoreDisplayProps {
+//     score: number;
+//     isDarkMode: boolean;
+// }
+// const SimilarityScoreDisplay: React.FC<SimilarityScoreDisplayProps> = ({ score, isDarkMode }) => {
+//     const getScoreColor = (score: number) => {
+//         if (score >= 0.8) return isDarkMode ? 'text-green-400' : 'text-green-600';
+//         if (score >= 0.6) return isDarkMode ? 'text-yellow-400' : 'text-yellow-600';
+//         return isDarkMode ? 'text-red-400' : 'text-red-600';
+//     };
+
+//     return (
+//         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
+//             <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+//                 Content Similarity Score
+//             </h4>
+//             <div className="flex items-center justify-between">
+//                 <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>
+//                     Score: <span className={`text-lg font-bold ${getScoreColor(score)}`}>{Math.round(score * 100)}%</span>
+//                 </p>
+//                 <div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+//                     {score >= 0.8 ? 'Excellent' : score >= 0.6 ? 'Good' : 'Needs Review'}
+//                 </div>
+//             </div>
+//         </div>
+//     );
+// };
+
+// New Similarity Score
+interface HallucinationScoreDisplayProps {
+    scoreData: {
+        summaryScore: number;
+        highlightsScore: number;
+        overallScore: number;
+        summaryFlags: string[];
+        highlightsFlags: string[];
+        verdict: 'faithful' | 'minor_drift' | 'hallucinated';
+    };
     isDarkMode: boolean;
 }
-const SimilarityScoreDisplay: React.FC<SimilarityScoreDisplayProps> = ({ score, isDarkMode }) => {
-    const getScoreColor = (score: number) => {
-        if (score >= 0.8) return isDarkMode ? 'text-green-400' : 'text-green-600';
-        if (score >= 0.6) return isDarkMode ? 'text-yellow-400' : 'text-yellow-600';
-        return isDarkMode ? 'text-red-400' : 'text-red-600';
+const HallucinationScoreDisplay: React.FC<HallucinationScoreDisplayProps> = ({ scoreData, isDarkMode }) => {
+    const verdictConfig = {
+        faithful: {
+            label: 'Faithful',
+            color: isDarkMode ? 'text-green-400' : 'text-green-600',
+            bg: isDarkMode ? 'bg-green-900/30' : 'bg-green-50',
+            border: isDarkMode ? 'border-green-700/50' : 'border-green-200',
+            desc: 'AI summary closely reflects the source article.'
+        },
+        minor_drift: {
+            label: 'Minor Drift',
+            color: isDarkMode ? 'text-yellow-400' : 'text-yellow-600',
+            bg: isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50',
+            border: isDarkMode ? 'border-yellow-700/50' : 'border-yellow-200',
+            desc: 'Some phrases in the summary may be paraphrased or lightly reworded.'
+        },
+        hallucinated: {
+            label: 'Review Needed',
+            color: isDarkMode ? 'text-red-400' : 'text-red-600',
+            bg: isDarkMode ? 'bg-red-900/30' : 'bg-red-50',
+            border: isDarkMode ? 'border-red-700/50' : 'border-red-200',
+            desc: 'Summary contains language not present in the source. Read critically.'
+        }
     };
+    const cfg = verdictConfig[scoreData.verdict];
+    const allFlags = [...scoreData.summaryFlags, ...scoreData.highlightsFlags]
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .slice(0, 4);
 
     return (
         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
-            <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
-                Content Similarity Score
+            <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+                AI Faithfulness Check
             </h4>
-            <div className="flex items-center justify-between">
-                <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>
-                    Score: <span className={`text-lg font-bold ${getScoreColor(score)}`}>{Math.round(score * 100)}%</span>
-                </p>
-                <div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                    {score >= 0.8 ? 'Excellent' : score >= 0.6 ? 'Good' : 'Needs Review'}
+            <div className={`rounded-md px-3 py-2 mb-2 border ${cfg.bg} ${cfg.border}`}>
+                <div className="flex items-center justify-between mb-1">
+                    <span className={`text-sm font-semibold ${cfg.color}`}>{cfg.label}</span>
+                    <span className={`text-xs font-mono font-medium ${cfg.color}`}>
+                        {Math.round(scoreData.overallScore * 100)}%
+                    </span>
                 </div>
+                <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                    {cfg.desc}
+                </p>
             </div>
+            <div className={`flex gap-3 text-xs mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                <span>Summary: <strong>{Math.round(scoreData.summaryScore * 100)}%</strong></span>
+                <span>Highlights: <strong>{Math.round(scoreData.highlightsScore * 100)}%</strong></span>
+            </div>
+            {allFlags.length > 0 && (
+                <details className="mt-1">
+                    <summary className={`text-xs cursor-pointer ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                        {allFlags.length} phrase{allFlags.length > 1 ? 's' : ''} to verify
+                    </summary>
+                    <ul className="mt-1 space-y-0.5">
+                        {allFlags.map((f, i) => (
+                            <li key={i} className={`text-xs font-mono px-2 py-0.5 rounded ${isDarkMode ? 'bg-slate-700 text-slate-300' : 'bg-gray-100 text-gray-600'}`}>
+                                "{f}..."
+                            </li>
+                        ))}
+                    </ul>
+                </details>
+            )}
         </div>
     );
 };
@@ -451,7 +651,7 @@ const SmartStorySuite: React.FC = () => {
          {!storyData && !isLoading && !error && (
           <div className="text-center mb-8 pt-10">
               <h2 className={`text-2xl font-semibold mb-3 ${titleFont} ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
-                  Smart Story Suite - Beta
+                  Smart Story Suite 
               </h2>
              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-500'} text-sm max-w-md mx-auto`}>
                  The content will be adapted so scanners and readers can instantly choose what is of interest to them at this moment
@@ -630,7 +830,7 @@ const SmartStorySuite: React.FC = () => {
 
                 {/* Center Content */}
                  <motion.main className="lg:col-span-6 min-h-[400px]" variants={containerVariants} initial="hidden" animate="visible">
-                      <HighlightsSummaryComponent story={storyData} isDarkMode={isDarkMode} />
+                      <HighlightsSummaryComponent story={storyData} isDarkMode={isDarkMode} onImageClick={handleImageClick} />
                      <div className="space-y-6 mt-6">
                          <AnimatePresence mode="wait">
                              {readMode === 'summary' && activeSectionData && (
@@ -697,7 +897,13 @@ const SmartStorySuite: React.FC = () => {
                              {/* --- End SPICE Score Display --- */}
 
                              {/* Similarity Score Display */}
-                             <SimilarityScoreDisplay score={storyData.similarityScore} isDarkMode={isDarkMode} />
+                             {storyData.hallucinationScore && (
+                                <HallucinationScoreDisplay
+                                scoreData={storyData.hallucinationScore}
+                                isDarkMode={isDarkMode}
+                                />
+                                )
+                            }
 
                         </motion.div>
 
@@ -773,7 +979,7 @@ const SmartStorySuite: React.FC = () => {
 
               {/* Footer */}
               <footer className={`p-4 text-center text-xs ${isDarkMode ? 'bg-slate-900 text-slate-500 border-t border-slate-700' : 'bg-gray-50 text-gray-500 border-t border-gray-200'}`}>
-                New View News - Beta
+                New View News 
               </footer>
             </motion.div>
          )}

@@ -75,6 +75,15 @@ interface SpiceScoreData {
     // justifications?: { scannability: string; personalization: string; etc... };
 }
 
+interface HallucinationScoreData {
+    summaryScore: number;       // 0–1, how grounded the summary is
+    highlightsScore: number;    // 0–1, how grounded the highlights are
+    overallScore: number;       // weighted average
+    summaryFlags: string[];     // phrases in summary not found in article
+    highlightsFlags: string[];  // phrases in highlights not found in article
+    verdict: 'faithful' | 'minor_drift' | 'hallucinated';
+}
+
 interface StoryData {
     title: string;
     source: string;
@@ -88,6 +97,7 @@ interface StoryData {
     originalUrl: string;
     spiceScore: SpiceScoreData | null;
     similarityScore: number; // Add this new field
+    hallucinationScore: HallucinationScoreData | null; // Add Hallucination Score object
     storyTimeline: NewsVizTimeline | null; // Add News Viz Timeline object
 }
 
@@ -162,6 +172,77 @@ function calculateDiceCoefficient(str1: string, str2: string): number {
     // Calculate Dice coefficient
     const diceCoefficient = (2 * intersection) / (bigrams1.size + bigrams2.size);
     return Math.round(diceCoefficient * 100) / 100; // Round to 2 decimal places
+}
+
+function calculateHallucinationScore(
+    articleText: string,
+    summary: string,
+    highlights: string[]
+): HallucinationScoreData {
+    const articleLower = articleText.toLowerCase();
+
+    // Extract meaningful phrases (4+ word n-grams) from a string
+    function extractPhrases(text: string): string[] {
+        const words = text.toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .split(/\s+/)
+            .filter(w => w.length > 2);
+        const phrases: string[] = [];
+        for (let i = 0; i <= words.length - 4; i++) {
+            phrases.push(words.slice(i, i + 4).join(' '));
+        }
+        return phrases;
+    }
+
+    // Check what fraction of phrases appear in the source article
+    function scoreText(text: string): { score: number; flags: string[] } {
+        const phrases = extractPhrases(text);
+        if (phrases.length === 0) return { score: 1, flags: [] };
+        const flags: string[] = [];
+        let found = 0;
+        for (const phrase of phrases) {
+            if (articleLower.includes(phrase)) {
+                found++;
+            } else {
+                // Only flag 3-word versions of unmatched phrases to catch drift
+                const shortPhrase = phrase.split(' ').slice(0, 3).join(' ');
+                if (!articleLower.includes(shortPhrase) && !flags.includes(phrase)) {
+                    flags.push(phrase);
+                }
+            }
+        }
+        return {
+            score: Math.round((found / phrases.length) * 100) / 100,
+            flags: flags.slice(0, 5) // cap at 5 flagged phrases
+        };
+    }
+
+    const summaryResult = scoreText(summary);
+    const highlightResults = highlights.map(h => scoreText(h));
+    const highlightsScore = highlights.length > 0
+        ? Math.round(
+            (highlightResults.reduce((sum, r) => sum + r.score, 0) / highlights.length)
+            * 100) / 100
+        : 1;
+    const highlightsFlags = highlightResults.flatMap(r => r.flags).slice(0, 5);
+
+    // Weighted: summary counts 60%, highlights 40%
+    const overall = Math.round(
+        (summaryResult.score * 0.6 + highlightsScore * 0.4) * 100
+    ) / 100;
+
+    const verdict: HallucinationScoreData['verdict'] =
+        overall >= 0.75 ? 'faithful' :
+        overall >= 0.45 ? 'minor_drift' : 'hallucinated';
+
+    return {
+        summaryScore: summaryResult.score,
+        highlightsScore,
+        overallScore: overall,
+        summaryFlags: summaryResult.flags,
+        highlightsFlags,
+        verdict
+    };
 }
 
 // POST function
@@ -592,10 +673,15 @@ Critical JSON Rules & Escaping Guide:
                 articleText,
                 parsedData.factSections?.map(section => section.content).join(' ') || ''
             ),
-            storyTimeline : parsedData.storyTimeline
+            storyTimeline : parsedData.storyTimeline,
+            hallucinationScore: calculateHallucinationScore(
+                articleText,
+                parsedData.summary || '',
+                Array.isArray(parsedData.highlights) ? parsedData.highlights : []
+            )
         };
 
-        console.log(`DEBUG: Final storyData: Title='${storyData.title}', Author='${storyData.author || 'N/A'}', Date='${storyData.date || 'N/A'}', PrimaryImage='${storyData.imageUrl || 'N/A'}', AdditionalImages=${storyData.imageUrls?.length ?? 0}, Sections=${storyData.factSections.length}, SPICE Score=${storyData.spiceScore?.total ?? 'N/A'}, Story Timeline = ${storyData.storyTimeline}`);
+        console.log(`DEBUG: Final storyData: Title='${storyData.title}', Author='${storyData.author || 'N/A'}', Date='${storyData.date || 'N/A'}', PrimaryImage='${storyData.imageUrl || 'N/A'}', AdditionalImages=${storyData.imageUrls?.length ?? 0}, Sections=${storyData.factSections.length}, SPICE Score=${storyData.spiceScore?.total ?? 'N/A'}, Hallucination Verdict=${storyData.hallucinationScore?.verdict ?? 'N/A'}, Overall=${storyData.hallucinationScore?.overallScore ?? 'N/A'}`);
         if (storyData.factSections.length > 0) {
             console.log(`DEBUG: Generated Section Titles: ${storyData.factSections.map(s => s.title).join('; ')}`);
         }
