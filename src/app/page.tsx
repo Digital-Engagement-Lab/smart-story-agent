@@ -174,7 +174,7 @@ const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({
             type="button"
             onClick={() => onImageClick(primaryImage)}
             className={`float-right ml-4 mb-2 w-36 rounded-lg overflow-hidden border shadow-sm
-                focus:outline-none focus:ring-2 focus:ring-teal-500
+                focus:outline-none focus:ring-2 focus:ring-red-600
                 ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -226,7 +226,7 @@ const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({
                         type="button"
                         onClick={() => onImageClick(summaryImage)}
                         className={`flex-shrink-0 w-28 rounded-lg overflow-hidden border shadow-sm
-                            focus:outline-none focus:ring-2 focus:ring-teal-500
+                            focus:outline-none focus:ring-2 focus:ring-red-600
                             ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -255,7 +255,7 @@ const FactSectionDisplay: React.FC<FactSectionDisplayProps> = ({ section, isDark
         layout
         className={`rounded-lg p-5 shadow-sm ${isDarkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-gray-200'} border`}
      >
-        <h2 className={`text-xl font-semibold mb-3 ${isDarkMode ? 'text-teal-400' : 'text-teal-700'}`}>
+        <h2 className="text-xl font-semibold mb-3 text-gray-900">
             {section.title}
         </h2>
         <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
@@ -289,7 +289,7 @@ const AdditionalImage: React.FC<AdditionalImageProps> = ({ src, alt, isDarkMode,
         <motion.button
             type="button"
             onClick={onClick}
-            className={`w-full h-auto block rounded shadow-sm border overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 ${isDarkMode ? 'border-slate-600 focus:ring-teal-500 focus:ring-offset-slate-800' : 'border-gray-300 focus:ring-teal-600 focus:ring-offset-white'}`}
+            className={`w-full h-auto block rounded shadow-sm border overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 ${isDarkMode ? 'border-slate-600 focus:ring-red-600 focus:ring-offset-slate-800' : 'border-gray-300 focus:ring-red-600 focus:ring-offset-white'}`}
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.98 }}
             title="Click to enlarge"
@@ -371,7 +371,7 @@ const SpiceScoreDisplay: React.FC<SpiceScoreDisplayProps> = ({ scoreData, isDark
     // Simple Text display
     return (
         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
-            <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+            <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
                 Engagement Score (SPICE)
             </h4>
             <div className="flex items-center justify-between">
@@ -400,12 +400,12 @@ const SpiceScoreDisplay: React.FC<SpiceScoreDisplayProps> = ({ scoreData, isDark
 //     const getScoreColor = (score: number) => {
 //         if (score >= 0.8) return isDarkMode ? 'text-green-400' : 'text-green-600';
 //         if (score >= 0.6) return isDarkMode ? 'text-yellow-400' : 'text-yellow-600';
-//         return isDarkMode ? 'text-red-400' : 'text-red-600';
+//         return isDarkMode ? 'text-red-400' : 'text-red-700';
 //     };
 
 //     return (
 //         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
-//             <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+//             <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
 //                 Content Similarity Score
 //             </h4>
 //             <div className="flex items-center justify-between">
@@ -450,7 +450,7 @@ const HallucinationScoreDisplay: React.FC<HallucinationScoreDisplayProps> = ({ s
         },
         hallucinated: {
             label: 'Review Needed',
-            color: isDarkMode ? 'text-red-400' : 'text-red-600',
+            color: isDarkMode ? 'text-red-400' : 'text-red-700',
             bg: isDarkMode ? 'bg-red-900/30' : 'bg-red-50',
             border: isDarkMode ? 'border-red-700/50' : 'border-red-200',
             desc: 'Summary contains language not present in the source. Read critically.'
@@ -463,7 +463,7 @@ const HallucinationScoreDisplay: React.FC<HallucinationScoreDisplayProps> = ({ s
 
     return (
         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
-            <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+            <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
                 AI Faithfulness Check
             </h4>
             <div className={`rounded-md px-3 py-2 mb-2 border ${cfg.bg} ${cfg.border}`}>
@@ -508,28 +508,28 @@ const SmartStorySuite: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [readMode, setReadMode] = useState<'summary' | 'detailed'>('summary');
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  {/*const [isDarkMode, setIsDarkMode] = useState<boolean>(false);*/}
+  const isDarkMode = false;
   const [imageLoadError, setImageLoadError] = useState<boolean>(false);
   const [enlargedImageUrl, setEnlargedImageUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const storedPreference = localStorage.getItem('darkMode');
-    if (storedPreference !== null) {
-      setIsDarkMode(storedPreference === 'true');
-    } else {
-      setIsDarkMode(prefersDark);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+//   useEffect(() => {
+//     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+//     const storedPreference = localStorage.getItem('darkMode');
+//     if (storedPreference !== null) {
+//       setIsDarkMode(storedPreference === 'true');
+//     } else {
+//       setIsDarkMode(prefersDark);
+//     }
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('darkMode', String(isDarkMode));
-    document.documentElement.classList.toggle('dark', isDarkMode); // Add/remove 'dark' class on <html>
-  }, [isDarkMode]);
+//   useEffect(() => {
+//     localStorage.setItem('darkMode', String(isDarkMode));
+//     document.documentElement.classList.toggle('dark', isDarkMode); // Add/remove 'dark' class on <html>
+//   }, [isDarkMode]);
 
-
-  const toggleTheme = (): void => setIsDarkMode(!isDarkMode);
+//  const toggleTheme = (): void => setIsDarkMode(!isDarkMode);
 
   const handleSectionClick = (sectionId: string): void => {
     setActiveSectionId(sectionId);
@@ -673,7 +673,7 @@ const SmartStorySuite: React.FC = () => {
                         onChange={(e) => setUrlInput(e.target.value)}
                         placeholder="https://www.example.com/news/article-name"
                         required
-                        className={`flex-grow p-2 border rounded-md text-sm ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} focus:ring-teal-500 focus:border-teal-500 transition`}
+                        className={`flex-grow p-2 border rounded-md text-sm ${isDarkMode ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'} focus:ring-red-600 focus:border-red-600 transition`}
                         disabled={isLoading}
                     />
                     <button
@@ -682,7 +682,7 @@ const SmartStorySuite: React.FC = () => {
                         className={`px-4 py-2 rounded-md font-semibold text-sm transition flex items-center justify-center whitespace-nowrap ${
                             isLoading
                                 ? `cursor-not-allowed ${isDarkMode ? 'bg-slate-600 text-slate-400' : 'bg-gray-300 text-gray-500'}`
-                                : `text-white ${isDarkMode ? 'bg-teal-600 hover:bg-teal-700' : 'bg-teal-700 hover:bg-teal-800'} disabled:opacity-50 disabled:cursor-not-allowed`
+                                : `text-white ${isDarkMode ? 'bg-red-700 hover:bg-red-700' : 'bg-red-700 hover:bg-red-800'} disabled:opacity-50 disabled:cursor-not-allowed`
                         }`}
                     >
                          {isLoading ? ( <> <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> Processing... </> ) : ( 'Analyze Article' )}
@@ -743,14 +743,16 @@ const SmartStorySuite: React.FC = () => {
                             r="10"
                             stroke="currentColor"
                             strokeWidth="2"
-                            className={`${isDarkMode ? 'stroke-teal-400' : 'stroke-teal-700'}`}
+                            // className={`${isDarkMode ? 'stroke-red-700' : 'stroke-red-700'}`}
+                            className="stroke-red-700"
                         />
                         <path
                             d="M12 2L2 12L12 22L22 12L12 2"
                             fill="none"
                             stroke="currentColor"
                             strokeWidth="2"
-                            className={`${isDarkMode ? 'stroke-teal-400' : 'stroke-teal-700'}`}
+                            // className={`${isDarkMode ? 'stroke-red-700' : 'stroke-red-700'}`}
+                            className="stroke-red-700"
                         />
                     </svg>
                 </motion.div>
@@ -776,13 +778,13 @@ const SmartStorySuite: React.FC = () => {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
                         <h1 className={`text-2xl lg:text-3xl font-bold ${titleFont} leading-tight mb-2 sm:mb-0 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}> {storyData.title} </h1>
                         <div className="flex items-center gap-2 self-end sm:self-auto">
-                            <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.3 }} onClick={toggleTheme} aria-label="Toggle theme" className={`p-2 rounded-full transition-colors ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-yellow-400' : 'bg-gray-200 hover:bg-gray-300 text-slate-600'}`} >
+                            {/* <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2, duration: 0.3 }} onClick={toggleTheme} aria-label="Toggle theme" className={`p-2 rounded-full transition-colors ${isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-yellow-400' : 'bg-gray-200 hover:bg-gray-300 text-slate-600'}`} >
                                 {isDarkMode ? (
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clipRule="evenodd" /></svg>
                                 ) : (
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
                                 )}
-                            </motion.button>
+                            </motion.button> */}
 
                             {/* --- NewsLine Visualization ---*/}
                             {storyData.storyTimeline && <NewsVizGraph 
@@ -798,8 +800,8 @@ const SmartStorySuite: React.FC = () => {
                             {storyData.date && storyData.date !== 'Date not specified' && (<> | {storyData.date}</>)}
                         </p>
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.3 }} className={`flex items-center space-x-2 p-1 rounded-md ${isDarkMode ? 'bg-slate-700' : 'bg-gray-100'}`} >
-                            <button onClick={() => changeReadMode('summary')} className={`px-3 py-1 text-xs sm:text-sm font-medium rounded transition-colors ${ readMode === 'summary' ? `${isDarkMode ? 'bg-teal-600 text-white shadow-sm' : 'bg-teal-700 text-white shadow-sm'}` : `${isDarkMode ? 'text-slate-300 hover:bg-slate-600/50' : 'text-gray-600 hover:bg-gray-200'}` }`} > Summary View </button>
-                            <button onClick={() => changeReadMode('detailed')} className={`px-3 py-1 text-xs sm:text-sm font-medium rounded transition-colors ${ readMode === 'detailed' ? `${isDarkMode ? 'bg-teal-600 text-white shadow-sm' : 'bg-teal-700 text-white shadow-sm'}` : `${isDarkMode ? 'text-slate-300 hover:bg-slate-600/50' : 'text-gray-600 hover:bg-gray-200'}` }`} > Detailed View </button>
+                            <button onClick={() => changeReadMode('summary')} className={`px-3 py-1 text-xs sm:text-sm font-medium rounded transition-colors ${ readMode === 'summary' ? `${isDarkMode ? 'bg-red-700 text-white shadow-sm' : 'bg-red-700 text-white shadow-sm'}` : `${isDarkMode ? 'text-slate-300 hover:bg-slate-600/50' : 'text-gray-600 hover:bg-gray-200'}` }`} > Summary View </button>
+                            <button onClick={() => changeReadMode('detailed')} className={`px-3 py-1 text-xs sm:text-sm font-medium rounded transition-colors ${ readMode === 'detailed' ? `${isDarkMode ? 'bg-red-700 text-white shadow-sm' : 'bg-red-700 text-white shadow-sm'}` : `${isDarkMode ? 'text-slate-300 hover:bg-slate-600/50' : 'text-gray-600 hover:bg-gray-200'}` }`} > Detailed View </button>
                         </motion.div>
                     </div>
                </header>
@@ -810,7 +812,7 @@ const SmartStorySuite: React.FC = () => {
                 {/* Left Nav */}
                  <motion.nav className="lg:col-span-3" variants={containerVariants} initial="hidden" animate="visible">
                       <div className="sticky top-6">
-                         <h2 className={`text-xs font-semibold mb-3 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+                         <h2 className={`text-xs font-semibold mb-3 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
                             Explore Sections
                          </h2>
                          <div className="flex flex-col space-y-1.5">
@@ -819,7 +821,21 @@ const SmartStorySuite: React.FC = () => {
                                 key={section.id}
                                 variants={sidebarItemVariants}
                                 onClick={() => handleSectionClick(section.id)}
-                                className={`w-full py-2.5 px-4 text-left rounded-md transition-colors text-sm font-medium ${ activeSectionId === section.id ? `${isDarkMode ? 'bg-teal-600 text-white' : 'bg-teal-700 text-white'}` : `${isDarkMode ? 'bg-slate-700 text-slate-300 hover:bg-slate-600/70 hover:text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}` }`} > {section.title} </motion.button>
+                                className={`w-full py-2.5 px-4 text-left rounded-md
+  transition-colors text-sm font-medium
+  bg-red-700 text-white hover:bg-red-800
+  ${activeSectionId === section.id
+    ? 'ring-2 ring-offset-2 ring-red-900'
+    : ''
+  }`}
+//                                 className={`w-full py-2.5 px-4 text-left rounded-md
+//   transition-colors text-sm font-medium border border-red-700
+//   ${activeSectionId === section.id
+//     ? 'bg-red-700 text-white'
+//     : 'bg-white text-red-700 hover:bg-red-50'
+//   }`}
+ > {section.title} 
+                                </motion.button>
                            ))}
                            {(!storyData.factSections || storyData.factSections.length === 0) && (
                              <motion.p variants={sidebarItemVariants} className={`text-sm px-1 ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No specific sections found.</motion.p>
@@ -868,7 +884,7 @@ const SmartStorySuite: React.FC = () => {
 
                         {/* Story Details card (including SPICE score) */}
                         <motion.div variants={itemVariants} className={`rounded-lg p-4 ${isDarkMode ? 'bg-slate-700/50 border-slate-600/50' : 'bg-gray-50/80 border-gray-200'} border`}>
-                            <h3 className={`text-xs font-semibold mb-2.5 uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>Story Details</h3>
+                            <h3 className={`text-xs font-semibold mb-2.5 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>Story Details</h3>
                             <div className={`text-xs space-y-1.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
                                 {storyData.date && storyData.date !== 'Date not specified' && ( <p><span className="font-medium">Published:</span> {storyData.date}</p> )}
                                 <p><span className="font-medium">Source:</span> {storyData.source}</p>
@@ -880,8 +896,8 @@ const SmartStorySuite: React.FC = () => {
                                 rel="noopener noreferrer"
                                 className={`mt-3 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors shadow-sm ${
                                     isDarkMode
-                                    ? 'bg-teal-600 text-white hover:bg-teal-500'
-                                    : 'bg-teal-700 text-white hover:bg-teal-800'
+                                    ? 'bg-red-700 text-white hover:bg-red-600'
+                                    : 'bg-red-700 text-white hover:bg-red-800'
                                 }`}
                             >
                                 View Original Article
@@ -954,7 +970,7 @@ const SmartStorySuite: React.FC = () => {
                         {/* --- Additional Images Display --- */}
                         {storyData.imageUrls && storyData.imageUrls.length > 0 && (
                            <motion.div variants={itemVariants} className="space-y-3">
-                              <h4 className={`text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-teal-400' : 'text-teal-600'}`}>
+                              <h4 className={`text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
                                   More Images
                               </h4>
                               <div className="grid grid-cols-2 gap-3">
