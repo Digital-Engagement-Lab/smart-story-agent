@@ -169,27 +169,6 @@ const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({
         Story Highlights
     </h2>
 
-    {primaryImage && !imgError && (
-        <motion.button
-            type="button"
-            onClick={() => onImageClick(primaryImage)}
-            className={`float-right ml-4 mb-2 w-36 rounded-lg overflow-hidden border shadow-sm
-                focus:outline-none focus:ring-2 focus:ring-red-600
-                ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            title="Click to enlarge"
-        >
-            <img
-                src={primaryImage}
-                alt="Article primary image"
-                className="w-full h-auto object-cover block"
-                loading="lazy"
-                onError={() => setImgError(true)}
-            />
-        </motion.button>
-    )}
-
     <ul className="mb-0 pl-5 list-disc space-y-1.5 text-sm">
         {story.highlights.map((highlight, index) => (
             <li
@@ -204,43 +183,42 @@ const HighlightsSummaryComponent: React.FC<HighlightsSummaryProps> = ({
 </div>
             
 
-            {/* ── Summary row: text left, second image right ── */}
-            <div className="flex gap-4 items-center mt-5 pt-4 border-t border-dashed
-                border-gray-200 dark:border-slate-600">
-                <div className="flex-1 min-w-0">
-                    <h3 className={`text-lg font-semibold mb-2 ${
-                        isDarkMode ? 'text-white' : 'text-gray-800'
-                    }`}>
-                        Summary
-                    </h3>
-                    <p className={`text-sm leading-relaxed ${
+            {/* ── Summary row ── */}
+            <div className="mt-5 pt-4 border-t border-dashed border-gray-200 dark:border-slate-600">
+                <h3 className={`text-lg font-semibold mb-3 ${
+                    isDarkMode ? 'text-white' : 'text-gray-800'
+                }`}>
+                    Summary
+                </h3>
+                <div className={`flex gap-4 items-start ${summaryImage && !sumImgError ? '' : ''}`}>
+                    <p className={`flex-1 text-sm leading-relaxed ${
                         isDarkMode ? 'text-slate-300' : 'text-gray-700'
                     }`}>
                         {story.summary}
                     </p>
-                </div>
 
-                {/* Second image — right of summary */}
-                {summaryImage && !sumImgError && (
-                    <motion.button
-                        type="button"
-                        onClick={() => onImageClick(summaryImage)}
-                        className={`flex-shrink-0 w-28 rounded-lg overflow-hidden border shadow-sm
-                            focus:outline-none focus:ring-2 focus:ring-red-600
-                            ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        title="Click to enlarge"
-                    >
-                        <img
-                            src={summaryImage}
-                            alt="Additional article image"
-                            className="w-full h-auto object-cover block"
-                            loading="lazy"
-                            onError={() => setSumImgError(true)}
-                        />
-                    </motion.button>
-                )}
+                    {/* Summary image — beside text, full image visible */}
+                    {summaryImage && !sumImgError && (
+                        <motion.button
+                            type="button"
+                            onClick={() => onImageClick(summaryImage)}
+                            className={`flex-shrink-0 rounded-xl overflow-hidden border shadow-md
+                                focus:outline-none focus:ring-2 focus:ring-red-600
+                                ${isDarkMode ? 'border-slate-600' : 'border-gray-200'}`}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.99 }}
+                            title="Click to enlarge"
+                        >
+                            <img
+                                src={summaryImage}
+                                alt="Additional article image"
+                                className="h-36 w-auto object-contain block"
+                                loading="lazy"
+                                onError={() => setSumImgError(true)}
+                            />
+                        </motion.button>
+                    )}
+                </div>
             </div>
         </motion.div>
     );
@@ -905,12 +883,6 @@ const SmartStorySuite: React.FC = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                 </svg>
                             </a>
-
-                             {/* --- SPICE Score Display --- */}
-                             {storyData.spiceScore && (
-                                <SpiceScoreDisplay scoreData={storyData.spiceScore} isDarkMode={isDarkMode} />
-                             )}
-                             {/* --- End SPICE Score Display --- */}
 
                              {/* Similarity Score Display */}
                              {storyData.hallucinationScore && (
