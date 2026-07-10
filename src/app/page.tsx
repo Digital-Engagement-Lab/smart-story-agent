@@ -369,110 +369,30 @@ const SpiceScoreDisplay: React.FC<SpiceScoreDisplayProps> = ({ scoreData, isDark
     );
 };
 
-// Add the SimilarityScoreDisplay component
-// interface SimilarityScoreDisplayProps {
-//     score: number;
-//     isDarkMode: boolean;
-// }
-// const SimilarityScoreDisplay: React.FC<SimilarityScoreDisplayProps> = ({ score, isDarkMode }) => {
-//     const getScoreColor = (score: number) => {
-//         if (score >= 0.8) return isDarkMode ? 'text-green-400' : 'text-green-600';
-//         if (score >= 0.6) return isDarkMode ? 'text-yellow-400' : 'text-yellow-600';
-//         return isDarkMode ? 'text-red-400' : 'text-red-700';
-//     };
-
-//     return (
-//         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
-//             <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
-//                 Content Similarity Score
-//             </h4>
-//             <div className="flex items-center justify-between">
-//                 <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>
-//                     Score: <span className={`text-lg font-bold ${getScoreColor(score)}`}>{Math.round(score * 100)}%</span>
-//                 </p>
-//                 <div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-//                     {score >= 0.8 ? 'Excellent' : score >= 0.6 ? 'Good' : 'Needs Review'}
-//                 </div>
-//             </div>
-//         </div>
-//     );
-// };
-
-// New Similarity Score
-interface HallucinationScoreDisplayProps {
-    scoreData: {
-        summaryScore: number;
-        highlightsScore: number;
-        overallScore: number;
-        summaryFlags: string[];
-        highlightsFlags: string[];
-        verdict: 'faithful' | 'minor_drift' | 'hallucinated';
-    };
+interface SimilarityScoreDisplayProps {
+    score: number;
     isDarkMode: boolean;
 }
-const HallucinationScoreDisplay: React.FC<HallucinationScoreDisplayProps> = ({ scoreData, isDarkMode }) => {
-    const verdictConfig = {
-        faithful: {
-            label: 'Faithful',
-            color: isDarkMode ? 'text-green-400' : 'text-green-600',
-            bg: isDarkMode ? 'bg-green-900/30' : 'bg-green-50',
-            border: isDarkMode ? 'border-green-700/50' : 'border-green-200',
-            desc: 'AI summary closely reflects the source article.'
-        },
-        minor_drift: {
-            label: 'Minor Drift',
-            color: isDarkMode ? 'text-yellow-400' : 'text-yellow-600',
-            bg: isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50',
-            border: isDarkMode ? 'border-yellow-700/50' : 'border-yellow-200',
-            desc: 'Some phrases in the summary may be paraphrased or lightly reworded.'
-        },
-        hallucinated: {
-            label: 'Review Needed',
-            color: isDarkMode ? 'text-red-400' : 'text-red-700',
-            bg: isDarkMode ? 'bg-red-900/30' : 'bg-red-50',
-            border: isDarkMode ? 'border-red-700/50' : 'border-red-200',
-            desc: 'Summary contains language not present in the source. Read critically.'
-        }
+const SimilarityScoreDisplay: React.FC<SimilarityScoreDisplayProps> = ({ score, isDarkMode }) => {
+    const getScoreColor = (score: number) => {
+        if (score >= 0.8) return isDarkMode ? 'text-green-400' : 'text-green-600';
+        if (score >= 0.6) return isDarkMode ? 'text-yellow-400' : 'text-yellow-600';
+        return isDarkMode ? 'text-red-400' : 'text-red-600';
     };
-    const cfg = verdictConfig[scoreData.verdict];
-    const allFlags = [...scoreData.summaryFlags, ...scoreData.highlightsFlags]
-        .filter((v, i, a) => a.indexOf(v) === i)
-        .slice(0, 4);
 
     return (
         <div className="mt-3 pt-3 border-t border-dashed border-gray-300 dark:border-slate-600">
-            <h4 className={`text-xs font-semibold mb-2 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
-                AI Faithfulness Check
+            <h4 className={`text-xs font-semibold mb-1.5 uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
+                Content Similarity Score
             </h4>
-            <div className={`rounded-md px-3 py-2 mb-2 border ${cfg.bg} ${cfg.border}`}>
-                <div className="flex items-center justify-between mb-1">
-                    <span className={`text-sm font-semibold ${cfg.color}`}>{cfg.label}</span>
-                    <span className={`text-xs font-mono font-medium ${cfg.color}`}>
-                        {Math.round(scoreData.overallScore * 100)}%
-                    </span>
-                </div>
-                <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                    {cfg.desc}
+            <div className="flex items-center justify-between">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-200' : 'text-gray-700'}`}>
+                    Score: <span className={`text-lg font-bold ${getScoreColor(score)}`}>{Math.round(score * 100)}%</span>
                 </p>
+                <div className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                    {score >= 0.8 ? 'Excellent' : score >= 0.6 ? 'Good' : 'Needs Review'}
+                </div>
             </div>
-            <div className={`flex gap-3 text-xs mb-2 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                <span>Summary: <strong>{Math.round(scoreData.summaryScore * 100)}%</strong></span>
-                <span>Highlights: <strong>{Math.round(scoreData.highlightsScore * 100)}%</strong></span>
-            </div>
-            {allFlags.length > 0 && (
-                <details className="mt-1">
-                    <summary className={`text-xs cursor-pointer ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
-                        {allFlags.length} phrase{allFlags.length > 1 ? 's' : ''} to verify
-                    </summary>
-                    <ul className="mt-1 space-y-0.5">
-                        {allFlags.map((f, i) => (
-                            <li key={i} className={`text-xs font-mono px-2 py-0.5 rounded ${isDarkMode ? 'bg-slate-700 text-slate-300' : 'bg-gray-100 text-gray-600'}`}>
-                                "{f}..."
-                            </li>
-                        ))}
-                    </ul>
-                </details>
-            )}
         </div>
     );
 };
@@ -885,13 +805,12 @@ const SmartStorySuite: React.FC = () => {
                             </a>
 
                              {/* Similarity Score Display */}
-                             {storyData.hallucinationScore && (
-                                <HallucinationScoreDisplay
-                                scoreData={storyData.hallucinationScore}
-                                isDarkMode={isDarkMode}
+                             {storyData.similarityScore !== undefined && (
+                                <SimilarityScoreDisplay
+                                    score={storyData.similarityScore}
+                                    isDarkMode={isDarkMode}
                                 />
-                                )
-                            }
+                             )}
 
                         </motion.div>
 
