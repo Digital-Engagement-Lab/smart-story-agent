@@ -147,6 +147,53 @@ function cleanJsonString(str: string): string {
     }
 }
 
+// Best-effort parser for still-streaming JSON: closes any open string/array/object
+// so we can preview fields (title, summary, highlights, factSections) before Claude
+// finishes generating the full response.
+function attemptPartialParse(text: string): Partial<ExpectedClaudeResponse> | null {
+    let cleaned = text.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+    if (!cleaned.startsWith('{')) return null;
+
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+    const stack: string[] = [];
+
+    for (const ch of cleaned) {
+        result += ch;
+
+        if (escapeNext) {
+            escapeNext = false;
+            continue;
+        }
+        if (ch === '\\' && inString) {
+            escapeNext = true;
+            continue;
+        }
+        if (ch === '"') {
+            inString = !inString;
+            continue;
+        }
+        if (inString) continue;
+
+        if (ch === '{' || ch === '[') stack.push(ch);
+        else if (ch === '}' || ch === ']') stack.pop();
+    }
+
+    if (inString) result += '"';
+    result = result.replace(/,\s*$/, '').replace(/:\s*$/, ': null');
+
+    for (let i = stack.length - 1; i >= 0; i--) {
+        result += stack[i] === '{' ? '}' : ']';
+    }
+
+    try {
+        return JSON.parse(result);
+    } catch {
+        return null;
+    }
+}
+
 // Add this helper function for Dice coefficient calculation
 function calculateDiceCoefficient(str1: string, str2: string): number {
     // Convert strings to sets of bigrams
@@ -583,112 +630,154 @@ Critical JSON Rules & Escaping Guide:
         // *** END OF MODIFIED PROMPT ***
 
 
-        // --- Step 3: Call Claude API ---
-        console.log(`Sending request to Claude API for ${articleUrl}. Prompt length: ~${prompt.length} chars`);
-        const claudeResponse = await anthropicClient.messages.create({
-            model: "claude-haiku-4-5-20251001", // Consider Opus/Sonnet for complex instructions or longer context
-            max_tokens: 4000, 
-            system: "You are an expert data extraction and analysis tool. Your sole purpose is to return valid, correctly formatted JSON based precisely on the user's instructions and the provided text. You output ONLY the JSON object requested, nothing else. Ensure all special characters within JSON string values are properly escaped according to JSON specification. Perform the SPICE analysis accurately based *only* on the provided text. When creating 'factSections', adhere strictly to the 150-word segmentation rule and use the original text for content.",
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.1,
-        });
-        console.log(`Received response from Claude API for ${articleUrl}. Output tokens: ${claudeResponse.usage.output_tokens}`);
+        // --- Step 3: Stream Claude's response to the client over SSE ---
+        console.log(`Sending streaming request to Claude API for ${articleUrl}. Prompt length: ~${prompt.length} chars`);
 
-        // --- Step 4: Parse Claude's Response ---
-        if (!claudeResponse.content || claudeResponse.content.length === 0 || claudeResponse.content[0].type !== 'text' || !claudeResponse.content[0].text) {
-             console.error('Unexpected or empty response structure from Claude API:', JSON.stringify(claudeResponse));
-             throw new Error('Received an unexpected or empty response from the analysis service.');
-        }
-        const rawJsonString = claudeResponse.content[0].text.trim();
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+            async start(controller) {
+                const sendEvent = (event: string, data: unknown) => {
+                    controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+                };
 
-        const cleanedJsonString = cleanJsonString(rawJsonString);
-        let parsedData: ExpectedClaudeResponse;
+                let rawJsonString = '';
+                let lastPartialSent = '';
 
-        try {
-            parsedData = JSON.parse(cleanedJsonString);
-            console.log(`Successfully parsed Claude JSON response for ${articleUrl} (after cleanup).`);
+                try {
+                    const claudeStream = anthropicClient!.messages.stream({
+                        model: "claude-haiku-4-5-20251001", // Consider Opus/Sonnet for complex instructions or longer context
+                        max_tokens: 8000,
+                        system: "You are an expert data extraction and analysis tool. Your sole purpose is to return valid, correctly formatted JSON based precisely on the user's instructions and the provided text. You output ONLY the JSON object requested, nothing else. Ensure all special characters within JSON string values are properly escaped according to JSON specification. Perform the SPICE analysis accurately based *only* on the provided text. When creating 'factSections', adhere strictly to the 150-word segmentation rule and use the original text for content.",
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.1,
+                    });
 
-            // Basic validation for SPICE score structure if present
-            if (parsedData.spiceScore) {
-                if (typeof parsedData.spiceScore.total !== 'number' ||
-                    typeof parsedData.spiceScore.s !== 'number' ||
-                    typeof parsedData.spiceScore.p !== 'number' ||
-                    typeof parsedData.spiceScore.i !== 'number' ||
-                    typeof parsedData.spiceScore.c !== 'number' ||
-                    typeof parsedData.spiceScore.e !== 'number' ||
-                    !parsedData.spiceScore.justifications) {
-                   console.warn(`DEBUG: SPICE score structure seems invalid or incomplete in response for ${articleUrl}. Setting spiceScore to null.`);
-                   parsedData.spiceScore = null;
-                } else {
-                   console.log(`DEBUG: Parsed SPICE score: Total=${parsedData.spiceScore.total}, S=${parsedData.spiceScore.s}, P=${parsedData.spiceScore.p}, I=${parsedData.spiceScore.i}, C=${parsedData.spiceScore.c}, E=${parsedData.spiceScore.e}`);
+                    claudeStream.on('text', (textDelta: string) => {
+                        rawJsonString += textDelta;
+                        const partial = attemptPartialParse(rawJsonString);
+                        if (partial) {
+                            const partialJson = JSON.stringify(partial);
+                            if (partialJson !== lastPartialSent) {
+                                lastPartialSent = partialJson;
+                                sendEvent('partial', partial);
+                            }
+                        }
+                    });
+
+                    const finalMessage = await claudeStream.finalMessage();
+                    console.log(`Received full response from Claude API for ${articleUrl}. Output tokens: ${finalMessage.usage.output_tokens}`);
+
+                    // --- Step 4: Parse Claude's Response ---
+                    if (!finalMessage.content || finalMessage.content.length === 0 || finalMessage.content[0].type !== 'text' || !finalMessage.content[0].text) {
+                        console.error('Unexpected or empty response structure from Claude API:', JSON.stringify(finalMessage));
+                        throw new Error('Received an unexpected or empty response from the analysis service.');
+                    }
+                    rawJsonString = finalMessage.content[0].text.trim();
+
+                    const cleanedJsonString = cleanJsonString(rawJsonString);
+                    let parsedData: ExpectedClaudeResponse;
+
+                    try {
+                        parsedData = JSON.parse(cleanedJsonString);
+                        console.log(`Successfully parsed Claude JSON response for ${articleUrl} (after cleanup).`);
+
+                        // Basic validation for SPICE score structure if present
+                        if (parsedData.spiceScore) {
+                            if (typeof parsedData.spiceScore.total !== 'number' ||
+                                typeof parsedData.spiceScore.s !== 'number' ||
+                                typeof parsedData.spiceScore.p !== 'number' ||
+                                typeof parsedData.spiceScore.i !== 'number' ||
+                                typeof parsedData.spiceScore.c !== 'number' ||
+                                typeof parsedData.spiceScore.e !== 'number' ||
+                                !parsedData.spiceScore.justifications) {
+                               console.warn(`DEBUG: SPICE score structure seems invalid or incomplete in response for ${articleUrl}. Setting spiceScore to null.`);
+                               parsedData.spiceScore = null;
+                            } else {
+                               console.log(`DEBUG: Parsed SPICE score: Total=${parsedData.spiceScore.total}, S=${parsedData.spiceScore.s}, P=${parsedData.spiceScore.p}, I=${parsedData.spiceScore.i}, C=${parsedData.spiceScore.c}, E=${parsedData.spiceScore.e}`);
+                            }
+                        } else {
+                            console.log(`DEBUG: SPICE score not present or explicitly null in response for ${articleUrl}.`);
+                        }
+
+                    } catch (parseError: unknown) {
+                        console.error(`Error parsing Claude JSON response for ${articleUrl}:`, parseError);
+                        console.error('--- Raw Claude response string ---');
+                        console.error(rawJsonString);
+                        console.error('--- Cleaned JSON string (attempted fix) ---');
+                        console.error(cleanedJsonString);
+                        console.error('--- End Logs ---');
+
+                        let errorMessage = 'Failed to process the analysis service response (JSON parse error).';
+                         if (parseError instanceof Error) {
+                            errorMessage = parseError.message.includes('position')
+                               ? parseError.message
+                               : `Failed to process the analysis service response (JSON parse error): ${parseError.message}`;
+                        }
+                        throw new Error(`Analysis service response was not valid JSON. ${errorMessage}`);
+                    }
+
+                    // --- Step 5: Format data for Frontend ---
+                    const storyData: StoryData = {
+                        title: parsedData.title || fetchedTitle,
+                        source: parsedData.source || inferredSource,
+                        author: scrapedAuthor,
+                        date: parsedData.date,
+                        summary: parsedData.summary,
+                        highlights: Array.isArray(parsedData.highlights) ? parsedData.highlights : [],
+                        imageUrl: scrapedImageUrl,
+                        imageUrls: additionalImageUrls,
+                        originalUrl: originalUrl,
+                        factSections: Array.isArray(parsedData.factSections)
+                            ? parsedData.factSections.map(section => ({
+                                ...section,
+                                id: generateId(section.title)
+                              }))
+                            : [],
+                        spiceScore: parsedData.spiceScore ? {
+                            s: parsedData.spiceScore.s,
+                            p: parsedData.spiceScore.p,
+                            i: parsedData.spiceScore.i,
+                            c: parsedData.spiceScore.c,
+                            e: parsedData.spiceScore.e,
+                            total: parsedData.spiceScore.total,
+                        } : null,
+                        similarityScore: calculateDiceCoefficient(
+                            articleText,
+                            parsedData.factSections?.map(section => section.content).join(' ') || ''
+                        ),
+                        storyTimeline : parsedData.storyTimeline,
+                        hallucinationScore: calculateHallucinationScore(
+                            articleText,
+                            parsedData.summary || '',
+                            Array.isArray(parsedData.highlights) ? parsedData.highlights : []
+                        )
+                    };
+
+                    console.log(`DEBUG: Final storyData: Title='${storyData.title}', Author='${storyData.author || 'N/A'}', Date='${storyData.date || 'N/A'}', PrimaryImage='${storyData.imageUrl || 'N/A'}', AdditionalImages=${storyData.imageUrls?.length ?? 0}, Sections=${storyData.factSections.length}, SPICE Score=${storyData.spiceScore?.total ?? 'N/A'}, Hallucination Verdict=${storyData.hallucinationScore?.verdict ?? 'N/A'}, Overall=${storyData.hallucinationScore?.overallScore ?? 'N/A'}`);
+                    if (storyData.factSections.length > 0) {
+                        console.log(`DEBUG: Generated Section Titles: ${storyData.factSections.map(s => s.title).join('; ')}`);
+                    }
+
+                    // --- Step 6: Send final structured result to frontend ---
+                    sendEvent('complete', storyData);
+                } catch (streamError: unknown) {
+                    console.error(`Error while streaming analysis for ${articleUrl}:`, streamError);
+                    const message = streamError instanceof Error ? streamError.message : 'An internal server error occurred.';
+                    sendEvent('error', { error: message });
+                } finally {
+                    controller.close();
                 }
-            } else {
-                console.log(`DEBUG: SPICE score not present or explicitly null in response for ${articleUrl}.`);
             }
+        });
 
-
-        } catch (parseError: unknown) {
-            console.error(`Error parsing Claude JSON response for ${articleUrl}:`, parseError);
-            console.error('--- Raw Claude response string ---');
-            console.error(rawJsonString);
-            console.error('--- Cleaned JSON string (attempted fix) ---');
-            console.error(cleanedJsonString);
-            console.error('--- End Logs ---');
-
-            let errorMessage = 'Failed to process the analysis service response (JSON parse error).';
-             if (parseError instanceof Error) {
-                errorMessage = parseError.message.includes('position')
-                   ? parseError.message
-                   : `Failed to process the analysis service response (JSON parse error): ${parseError.message}`;
-            }
-            throw new Error(`Analysis service response was not valid JSON. ${errorMessage}`);
-        }
-
-        // --- Step 5: Format data for Frontend ---
-        const storyData: StoryData = {
-            title: parsedData.title || fetchedTitle,
-            source: parsedData.source || inferredSource,
-            author: scrapedAuthor,
-            date: parsedData.date,
-            summary: parsedData.summary,
-            highlights: Array.isArray(parsedData.highlights) ? parsedData.highlights : [],
-            imageUrl: scrapedImageUrl,
-            imageUrls: additionalImageUrls,
-            originalUrl: originalUrl,
-            factSections: Array.isArray(parsedData.factSections)
-                ? parsedData.factSections.map(section => ({
-                    ...section,
-                    id: generateId(section.title)
-                  }))
-                : [],
-            spiceScore: parsedData.spiceScore ? {
-                s: parsedData.spiceScore.s,
-                p: parsedData.spiceScore.p,
-                i: parsedData.spiceScore.i,
-                c: parsedData.spiceScore.c,
-                e: parsedData.spiceScore.e,
-                total: parsedData.spiceScore.total,
-            } : null,
-            similarityScore: calculateDiceCoefficient(
-                articleText,
-                parsedData.factSections?.map(section => section.content).join(' ') || ''
-            ),
-            storyTimeline : parsedData.storyTimeline,
-            hallucinationScore: calculateHallucinationScore(
-                articleText,
-                parsedData.summary || '',
-                Array.isArray(parsedData.highlights) ? parsedData.highlights : []
-            )
-        };
-
-        console.log(`DEBUG: Final storyData: Title='${storyData.title}', Author='${storyData.author || 'N/A'}', Date='${storyData.date || 'N/A'}', PrimaryImage='${storyData.imageUrl || 'N/A'}', AdditionalImages=${storyData.imageUrls?.length ?? 0}, Sections=${storyData.factSections.length}, SPICE Score=${storyData.spiceScore?.total ?? 'N/A'}, Hallucination Verdict=${storyData.hallucinationScore?.verdict ?? 'N/A'}, Overall=${storyData.hallucinationScore?.overallScore ?? 'N/A'}`);
-        if (storyData.factSections.length > 0) {
-            console.log(`DEBUG: Generated Section Titles: ${storyData.factSections.map(s => s.title).join('; ')}`);
-        }
-
-
-        // --- Step 6: Send Response to Frontend ---
-        return NextResponse.json(storyData, { status: 200 });
+        return new NextResponse(stream, {
+            status: 200,
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache, no-transform',
+                'Connection': 'keep-alive',
+            },
+        });
 
     } catch (error: unknown) {
         console.error(`Critical Error in POST /api/process-article for URL ${originalUrl || 'unknown'}:`, error);

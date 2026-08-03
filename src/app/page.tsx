@@ -64,6 +64,15 @@ interface StoryData {
     storyTimeline: NewsVizTimeline | null;
 }
 
+// Fields as they arrive from the backend's SSE 'partial' events, before the
+// full StoryData (images, scores, ids, etc.) is available.
+interface StreamingStoryData {
+    title?: string;
+    summary?: string;
+    highlights?: string[];
+    factSections?: Array<{ title: string; content: string }>;
+}
+
 // --- Animation Variants ---
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -402,6 +411,7 @@ const SimilarityScoreDisplay: React.FC<SimilarityScoreDisplayProps> = ({ score, 
 const SmartStorySuite: React.FC = () => {
   const [urlInput, setUrlInput] = useState<string>('');
   const [storyData, setStoryData] = useState<StoryData | null>(null);
+  const [streamingData, setStreamingData] = useState<StreamingStoryData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -453,6 +463,7 @@ const SmartStorySuite: React.FC = () => {
       setIsLoading(true);
       setError(null);
       setStoryData(null);
+      setStreamingData(null);
       setActiveSectionId(null);
       setReadMode('summary');
       setImageLoadError(false);
@@ -464,27 +475,66 @@ const SmartStorySuite: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ articleUrl: urlInput }),
            });
-           const data = await response.json();
 
-           console.log('<<< API RESPONSE >>> Raw data received:', data);
+           const contentType = response.headers.get('content-type') || '';
 
-           if (!response.ok) {
-                const errorMsg = data?.error || `Request failed with status: ${response.status} ${response.statusText}`;
-                 if (response.status >= 500 && response.status < 600) {
-                     throw new Error("Something wasn't right with the analysis service. Please try pasting the URL again or try a different article.");
-                 } else if (response.status === 400) {
-                     throw new Error(`Invalid request${data?.error ? `: ${data.error}` : '.'} Please check the URL.`);
-                 } else if (response.status === 403 || response.status === 404) {
-                     throw new Error(`Could not access article: ${errorMsg}`);
-                 }
-                throw new Error(errorMsg);
+           // Validation/fetch errors return a plain JSON error before streaming ever starts.
+           if (!response.ok || !contentType.includes('text/event-stream')) {
+               const data = await response.json().catch(() => null);
+               const errorMsg = data?.error || `Request failed with status: ${response.status} ${response.statusText}`;
+                if (response.status >= 500 && response.status < 600) {
+                    throw new Error("Something wasn't right with the analysis service. Please try pasting the URL again or try a different article.");
+                } else if (response.status === 400) {
+                    throw new Error(`Invalid request${data?.error ? `: ${data.error}` : '.'} Please check the URL.`);
+                } else if (response.status === 403 || response.status === 404) {
+                    throw new Error(`Could not access article: ${errorMsg}`);
+                }
+               throw new Error(errorMsg);
            }
 
-           console.log('<<< API RESPONSE >>> Primary imageUrl:', data?.imageUrl);
-           console.log('<<< API RESPONSE >>> Additional imageUrls count:', data?.imageUrls?.length ?? 0);
-           console.log('<<< API RESPONSE >>> SPICE Score:', data?.spiceScore); // Log SPICE score
+           if (!response.body) {
+               throw new Error('No response body received from the analysis service.');
+           }
 
-           setStoryData(data as StoryData); // Cast to StoryData (now includes spiceScore)
+           const reader = response.body.getReader();
+           const decoder = new TextDecoder();
+           let buffer = '';
+           let finalData: StoryData | null = null;
+
+           while (true) {
+               const { done, value } = await reader.read();
+               if (done) break;
+
+               buffer += decoder.decode(value, { stream: true });
+               const events = buffer.split('\n\n');
+               buffer = events.pop() ?? '';
+
+               for (const rawEvent of events) {
+                   const eventTypeMatch = rawEvent.match(/^event:\s*(.+)$/m);
+                   const dataMatch = rawEvent.match(/^data:\s*(.+)$/m);
+                   if (!dataMatch) continue;
+
+                   const eventType = eventTypeMatch?.[1]?.trim() ?? 'message';
+                   const payload = JSON.parse(dataMatch[1]);
+
+                   if (eventType === 'partial') {
+                       setStreamingData(payload as StreamingStoryData);
+                   } else if (eventType === 'complete') {
+                       finalData = payload as StoryData;
+                       setStoryData(finalData);
+                   } else if (eventType === 'error') {
+                       throw new Error(payload?.error || 'Analysis failed while streaming.');
+                   }
+               }
+           }
+
+           if (!finalData) {
+               throw new Error('The analysis service ended without returning a result.');
+           }
+
+           console.log('<<< API RESPONSE >>> Primary imageUrl:', finalData.imageUrl);
+           console.log('<<< API RESPONSE >>> Additional imageUrls count:', finalData.imageUrls?.length ?? 0);
+           console.log('<<< API RESPONSE >>> SPICE Score:', finalData.spiceScore);
        } catch (err: unknown) {
           console.error("Failed to process article:", err);
           let message = 'An unexpected error occurred. Please try again.';
@@ -498,12 +548,14 @@ const SmartStorySuite: React.FC = () => {
            setStoryData(null);
        } finally {
           setIsLoading(false);
+          setStreamingData(null);
        }
   };
 
    const handleReset = () => {
         setUrlInput('');
         setStoryData(null);
+        setStreamingData(null);
         setError(null);
         setIsLoading(false);
         setActiveSectionId(null);
@@ -655,11 +707,35 @@ const SmartStorySuite: React.FC = () => {
                     </svg>
                 </motion.div>
                 <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Analyzing Article...
+                    {streamingData?.title || 'Analyzing Article...'}
                 </h3>
-                <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                <p className={`text-sm mb-4 ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
                     This may take a moment. Please wait...
                 </p>
+
+                {(streamingData?.summary || (streamingData?.highlights && streamingData.highlights.length > 0) || (streamingData?.factSections && streamingData.factSections.length > 0)) && (
+                    <div className={`text-left max-w-xl w-full mx-auto rounded-lg p-4 space-y-3 ${isDarkMode ? 'bg-slate-800 border border-slate-700' : 'bg-gray-50 border border-gray-200'}`}>
+                        {streamingData?.summary && (
+                            <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                                {streamingData.summary}
+                            </p>
+                        )}
+                        {streamingData?.highlights && streamingData.highlights.length > 0 && (
+                            <ul className="list-disc pl-5 space-y-1 text-sm">
+                                {streamingData.highlights.map((highlight, index) => (
+                                    <li key={index} className={isDarkMode ? 'text-slate-300' : 'text-gray-700'}>
+                                        {highlight}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {streamingData?.factSections && streamingData.factSections.length > 0 && (
+                            <p className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                                {streamingData.factSections.length} section{streamingData.factSections.length > 1 ? 's' : ''} extracted so far...
+                            </p>
+                        )}
+                    </div>
+                )}
             </motion.div>
         )}
 
