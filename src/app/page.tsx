@@ -941,17 +941,18 @@ const SmartStorySuite: React.FC = () => {
                         )}
 
                         {/* --- Additional Images Display --- */}
-                        {storyData.imageUrls && storyData.imageUrls.length > 0 && (
+                        {/* Skip the first image: it's already shown as the Summary image above. */}
+                        {storyData.imageUrls && storyData.imageUrls.slice(1).length > 0 && (
                            <motion.div variants={itemVariants} className="space-y-3">
                               <h4 className={`text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-red-700' : 'text-red-700'}`}>
                                   More Images
                               </h4>
                               <div className="grid grid-cols-2 gap-3">
-                                  {storyData.imageUrls.map((imgUrl, index) => (
+                                  {storyData.imageUrls.slice(1).map((imgUrl, index) => (
                                      <AdditionalImage
                                          key={imgUrl + '-' + index}
                                          src={imgUrl}
-                                         alt={`Additional article image ${index + 1}`}
+                                         alt={`Additional article image ${index + 2}`}
                                          isDarkMode={isDarkMode}
                                          onClick={() => handleImageClick(imgUrl)}
                                      />
