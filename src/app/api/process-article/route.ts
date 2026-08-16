@@ -101,6 +101,18 @@ interface StoryData {
     storyTimeline: NewsVizTimeline | null; // Add News Viz Timeline object
 }
 
+// Many CMS/CDNs (e.g. Gannett's image resizer) serve the same photo at multiple
+// URLs that only differ by resize query params (?width=660 vs ?width=1200), so
+// exact-string dedup misses those. Compare on host + path instead.
+function normalizeImageUrl(url: string): string {
+    try {
+        const u = new URL(url);
+        return `${u.hostname}${u.pathname}`.toLowerCase();
+    } catch {
+        return url.toLowerCase();
+    }
+}
+
 // Helper to generate simple IDs
 const generateId = (title: string): string => {
     return title.toLowerCase()
@@ -447,7 +459,7 @@ export async function POST(req: Request) {
                         const imagesInContent = contentDom.window.document.querySelectorAll('img');
                         const seenUrls = new Set<string>();
                         if (scrapedImageUrl) {
-                            seenUrls.add(scrapedImageUrl);
+                            seenUrls.add(normalizeImageUrl(scrapedImageUrl));
                         }
 
                         console.log(`DEBUG: Found ${imagesInContent.length} <img> tags within Readability content.`);
@@ -464,9 +476,10 @@ export async function POST(req: Request) {
                                     const MIN_DIMENSION = 50;
                                     const isLikelyContent = (width === 0 && height === 0) || width >= MIN_DIMENSION || height >= MIN_DIMENSION;
 
-                                    if (['http:', 'https:'].includes(urlObj.protocol) && !seenUrls.has(absoluteSrc) && isLikelyContent) {
+                                    const normalizedSrc = normalizeImageUrl(absoluteSrc);
+                                    if (['http:', 'https:'].includes(urlObj.protocol) && !seenUrls.has(normalizedSrc) && isLikelyContent) {
                                          additionalImageUrls.push(absoluteSrc);
-                                         seenUrls.add(absoluteSrc);
+                                         seenUrls.add(normalizedSrc);
                                     }
                                 } catch (urlError) {
                                     console.warn(`DEBUG: Could not parse or resolve image src "${src}" within content. Error:`, urlError instanceof Error ? urlError.message : urlError);
