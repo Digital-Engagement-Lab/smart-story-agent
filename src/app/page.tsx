@@ -730,9 +730,15 @@ const SmartStorySuite: React.FC = () => {
                             </ul>
                         )}
                         {streamingData?.factSections && streamingData.factSections.length > 0 && (
-                            <p className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-400'}`}>
-                                {streamingData.factSections.length} section{streamingData.factSections.length > 1 ? 's' : ''} extracted so far...
-                            </p>
+                            <div className={`flex items-center gap-2 pt-2 mt-1 border-t border-dashed ${isDarkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                                <span className="relative flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-700"></span>
+                                </span>
+                                <p className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                                    {streamingData.factSections.length} section{streamingData.factSections.length > 1 ? 's' : ''} extracted so far...
+                                </p>
+                            </div>
                         )}
                     </div>
                 )}
