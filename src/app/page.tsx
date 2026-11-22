@@ -600,8 +600,12 @@ const SmartStorySuite: React.FC = () => {
 
          {!storyData && !isLoading && !error && (
           <div className="text-center mb-8 pt-10">
-              <h2 className={`text-2xl font-semibold mb-3 ${titleFont} ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>
-                  Smart Story Suite 
+              <h2 className="mb-3">
+                  <img
+                      src="/smart-story-structure-logo.png"
+                      alt="Smart Story Structure"
+                      className="h-20 sm:h-28 w-auto mx-auto mix-blend-multiply"
+                  />
               </h2>
              <p className={`${isDarkMode ? 'text-slate-400' : 'text-gray-500'} text-sm max-w-md mx-auto`}>
                  The content will be adapted so scanners and readers can instantly choose what is of interest to them at this moment
@@ -612,7 +616,7 @@ const SmartStorySuite: React.FC = () => {
         <motion.div layout className={`mb-8 p-5 rounded-lg shadow ${isDarkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border-gray-200/70 border'}`}>
              <form onSubmit={handleSubmit}>
                 <label htmlFor="articleUrl" className={`block text-sm font-medium mb-1.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
-                    Article URL
+                    Paste Article
                 </label>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <input
@@ -635,7 +639,7 @@ const SmartStorySuite: React.FC = () => {
                                 : `text-white ${isDarkMode ? 'bg-red-700 hover:bg-red-700' : 'bg-red-700 hover:bg-red-800'} disabled:opacity-50 disabled:cursor-not-allowed`
                         }`}
                     >
-                         {isLoading ? ( <> <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> Processing... </> ) : ( 'Analyze Article' )}
+                         {isLoading ? ( <> <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> Processing... </> ) : ( 'Structure Article' )}
                     </button>
                     {storyData && !isLoading && (
                         <button
@@ -969,7 +973,7 @@ const SmartStorySuite: React.FC = () => {
 
               {/* Footer */}
               <footer className={`p-4 text-center text-xs ${isDarkMode ? 'bg-slate-900 text-slate-500 border-t border-slate-700' : 'bg-gray-50 text-gray-500 border-t border-gray-200'}`}>
-                New View News 
+                Smart Story Structure
               </footer>
             </motion.div>
          )}
